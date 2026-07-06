@@ -1,56 +1,142 @@
-# DOOM in einer HTML-Datei
+# 🔥 DOOM in einer HTML-Datei
 
-`index.html` ist das komplette Spiel: **DOOM (1993, id Software)** als eine
-einzige, offline lauffähige Datei. Doppelklick genügt — läuft direkt von
-`file://` in jedem modernen Browser (Chrome, Edge, Firefox), ohne Server,
-ohne Internet, ohne Installation, ohne Admin-Rechte.
+```
+ ██████╗   ██████╗   ██████╗  ███╗   ███╗
+ ██╔══██╗ ██╔═══██╗ ██╔═══██╗ ████╗ ████║
+ ██║  ██║ ██║   ██║ ██║   ██║ ██╔████╔██║
+ ██║  ██║ ██║   ██║ ██║   ██║ ██║╚██╔╝██║
+ ██████╔╝ ╚██████╔╝ ╚██████╔╝ ██║ ╚═╝ ██║
+ ╚═════╝   ╚═════╝   ╚═════╝  ╚═╝     ╚═╝
+        eine Datei · offline · echt
+```
 
-## Was steckt drin
+**Das echte DOOM (1993, id Software) — komplett in einer einzigen `index.html`.**
 
-- **Engine:** Der originale id-Software-DOOM-Quellcode (GPLv2) über die
-  Portierungsschicht [doomgeneric](https://github.com/ozkl/doomgeneric),
-  mit Emscripten zu WebAssembly kompiliert. Das WASM-Binärmodul ist als
-  Base64 in die HTML eingebettet.
-- **Spieldaten:** `DOOM1.WAD` v1.9 — die offizielle Shareware-Episode 1
-  „Knee-Deep in the Dead" (MD5 `f0cefca49926d00903cf57551d901abe`),
-  ebenfalls als Base64 eingebettet. Die Shareware-WAD darf laut id Software
-  frei weiterverteilt werden.
-- Kein `fetch`, kein CDN, kein SharedArrayBuffer, keine COOP/COEP-Header.
+Kein Server. Kein Internet. Keine Installation. Keine Admin-Rechte.
+Datei doppelklicken → Browser öffnet sich → spielen.
 
-## Steuerung (klassisch)
+| | |
+|---|---|
+| 📦 **Eine Datei** | `index.html`, ~6 MB — Engine, WASM und WAD als Base64 eingebettet |
+| 🖥️ **Läuft überall** | Chrome, Edge, Firefox — direkt von `file://`, auch vom USB-Stick |
+| 🚫 **Null Netzwerk** | kein `fetch`, kein CDN, Network-Tab bleibt leer (getestet) |
+| 🔓 **Keine Sonderrechte** | kein SharedArrayBuffer, keine COOP/COEP-Header, keine Threads |
+| ⚖️ **100 % legal** | GPL-Engine + offizielle Shareware-WAD (frei verteilbar) |
+
+---
+
+## 📸 Screenshots
+
+| Titelbildschirm | E1M1 — Hangar |
+|---|---|
+| ![Titelbildschirm](assets/screenshot-title.png) | ![E1M1 Gameplay](assets/screenshot-e1m1.png) |
+
+*Screenshots aus dem automatisierten Selbsttest: Chromium, geöffnet per `file://`, null Netzwerk-Anfragen.*
+
+---
+
+## 🚀 Schnellstart
+
+1. `index.html` herunterladen (oder auf den USB-Stick kopieren)
+2. Doppelklick
+3. <kbd>Enter</kbd> drücken → **New Game** → Episode → Schwierigkeitsgrad
+4. Willkommen in *Knee-Deep in the Dead*. Viel Glück, Marine. 💀
+
+## 🎮 Steuerung (klassisch, wie 1993)
 
 | Taste | Funktion |
 |---|---|
-| Pfeiltasten | Laufen / Drehen |
-| Strg | Schießen |
-| Leertaste | Tür / Schalter |
-| Alt + Pfeile | Seitwärts (Strafe) |
-| Shift | Rennen |
-| 1–7 | Waffe wählen |
-| Esc / Enter | Menü |
-| Tab | Karte |
-| F2 / F3 | Speichern / Laden |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Vorwärts / rückwärts |
+| <kbd>←</kbd> <kbd>→</kbd> | Drehen |
+| <kbd>Strg</kbd> | Schießen |
+| <kbd>Leertaste</kbd> | Tür öffnen / Schalter |
+| <kbd>Alt</kbd> + <kbd>←</kbd> <kbd>→</kbd> | Seitwärts (Strafe) |
+| <kbd>Shift</kbd> | Rennen |
+| <kbd>1</kbd>–<kbd>7</kbd> | Waffe wählen |
+| <kbd>Esc</kbd> / <kbd>Enter</kbd> | Menü / auswählen |
+| <kbd>Tab</kbd> | Automap |
+| <kbd>F2</kbd> / <kbd>F3</kbd> | Speichern / Laden |
 
-## Vollversion
+Cheat-Codes einfach eintippen — `iddqd`, `idkfa` &amp; Co. funktionieren. 😈
 
-Wer die Vollversion (`DOOM.WAD`) besitzt: den Base64-Inhalt des Blocks
-`<script id="wad-data">` in `index.html` durch `base64(DOOM.WAD)` ersetzen
-(unter Windows: `certutil -encode DOOM.WAD wad.b64`, Kopf-/Fußzeile
-entfernen). Die Engine erkennt die Version automatisch.
+## 🧱 Wie es funktioniert
 
-## Selbst bauen
+```
+┌──────────────────────────── index.html ────────────────────────────┐
+│                                                                     │
+│  <canvas>  ← 640×400, image-rendering: pixelated                    │
+│                                                                     │
+│  <script id="wad-data">   DOOM1.WAD v1.9 (Base64, ~5,6 MB)          │
+│  <script id="wasm-data">  Engine-Binärmodul (Base64, ~500 KB)       │
+│                                                                     │
+│  Bootstrap-JS   Base64 → Bytes → Module.wasmBinary + MEMFS-Datei    │
+│  Tastatur-JS    keydown/keyup → DOOM-Keycodes → Key-Queue (C)       │
+│  Render-JS      BGRA-Framebuffer → RGBA → putImageData()            │
+│                                                                     │
+│  Emscripten-Glue + WASM  =  originaler id-DOOM-Code (GPLv2)         │
+│                             via doomgeneric, Mainloop @ 35 fps      │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-Siehe `build/`:
+- **Engine:** Der originale DOOM-Quellcode, den id Software unter der GPL
+  veröffentlicht hat, über die Portierungsschicht
+  [doomgeneric](https://github.com/ozkl/doomgeneric) mit Emscripten zu
+  WebAssembly kompiliert.
+- **Backend:** Eigenes, SDL-freies Plattform-Backend
+  ([`build/doomgeneric_emscripten.c`](build/doomgeneric_emscripten.c)):
+  direktes Canvas-Rendering, Tastatur-Ringpuffer, `emscripten_set_main_loop`
+  mit 35 fps — exakt DOOMs interne Tickrate.
+- **Spieldaten:** `DOOM1.WAD` v1.9, die offizielle Shareware-Episode 1
+  (MD5 `f0cefca49926d00903cf57551d901abe`, 4.196.020 Bytes).
 
-1. `doomgeneric_emscripten.c` — SDL-freies Plattform-Backend
-   (Canvas-Rendering, Tastatur-Queue, 35-fps-Mainloop) nach
-   `doomgeneric/doomgeneric/` kopieren.
-2. `build.sh` — kompiliert mit `emcc` zu `doom.js` + `doom.wasm`.
-3. `gen_html.py` — bettet Engine, WASM und WAD als Base64 in `index.html`.
+## 💿 Vollversion einbauen
 
-Engine-Quellcode: GPLv2 (id Software, Simon Howard/Chocolate Doom, ozkl/doomgeneric).
+Du besitzt die Vollversion (`DOOM.WAD` mit allen 3 Episoden)? Dann:
 
-## Hinweis
+1. WAD zu Base64 kodieren — unter Windows:
+   ```bat
+   certutil -encode DOOM.WAD wad.b64
+   ```
+   (erste und letzte Zeile `-----BEGIN/END CERTIFICATE-----` entfernen)
+2. In `index.html` den Inhalt des Blocks `<script id="wad-data">` durch den
+   Base64-Text ersetzen.
+3. Fertig — die Engine erkennt die Vollversion automatisch am WAD-Inhalt.
 
-Kein Sound (das Backend implementiert nur Grafik + Eingabe). Spielstände
-(F2) leben im Arbeitsspeicher der Seite und überleben kein Neuladen.
+## 🔨 Selbst bauen
+
+Benötigt: `emscripten`, `python3`. Ablauf (siehe [`build/`](build/)):
+
+```bash
+# 1. doomgeneric-Quellcode holen und Backend einsetzen
+cp build/doomgeneric_emscripten.c doomgeneric/doomgeneric/
+
+# 2. Engine kompilieren  →  doom.js + doom.wasm
+bash build/build.sh
+
+# 3. Alles in eine HTML backen  →  index.html
+python3 build/gen_html.py
+```
+
+## ❓ FAQ
+
+**Warum kein Sound?**
+Das Backend implementiert Grafik + Eingabe. Die Original-Soundmodule hängen
+an SDL/SDL_mixer, das bewusst weggelassen wurde, um die Datei klein und
+abhängigkeitsfrei zu halten. Das Spiel läuft davon unbeeindruckt.
+
+**Bleiben Spielstände erhalten?**
+<kbd>F2</kbd>-Speicherstände leben im Arbeitsspeicher der Seite und
+überleben kein Neuladen. Für eine Sitzung reicht's.
+
+**Ist das ein Klon wie Freedoom?**
+Nein. Engine = originaler id-Quellcode (GPL). Daten = originale
+Shareware-WAD von id Software. Das ist *das* DOOM.
+
+## ⚖️ Lizenz
+
+- **Engine:** GPLv2 — © id Software, Simon Howard (Chocolate Doom),
+  ozkl (doomgeneric). Quellcode und Build-Skripte liegen in
+  [`build/`](build/), Upstream: <https://github.com/ozkl/doomgeneric>
+- **DOOM1.WAD:** © id Software 1993. Die Shareware-Version darf laut
+  id Software unverändert frei weiterverteilt werden.
+- *DOOM* ist eine Marke von id Software LLC.
