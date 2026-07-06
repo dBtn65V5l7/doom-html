@@ -18,27 +18,28 @@ def wrap(s, n=400):
 
 html = r"""<!DOCTYPE html>
 <!--
-  DOOM (1993, id Software) - komplett in einer Datei.
+  DOOM (1993, id Software) - the whole game in a single file.
 
-  Engine: originaler id-Software-DOOM-Quellcode (GPLv2), Portierungsschicht
-  "doomgeneric" (https://github.com/ozkl/doomgeneric), kompiliert zu
-  WebAssembly mit Emscripten. Der GPL-Quelltext ist frei erhaeltlich.
+  Engine: the original id Software DOOM source code (GPLv2) via the
+  "doomgeneric" porting layer (https://github.com/ozkl/doomgeneric),
+  compiled to WebAssembly with Emscripten. The GPL source is freely
+  available.
 
-  Spieldaten: DOOM1.WAD v1.9 (Shareware, Episode 1 "Knee-Deep in the Dead",
-  MD5 f0cefca49926d00903cf57551d901abe). Die Shareware-WAD darf laut
-  id Software frei weiterverteilt werden.
+  Game data: DOOM1.WAD v1.9 (shareware, Episode 1 "Knee-Deep in the Dead",
+  MD5 f0cefca49926d00903cf57551d901abe). id Software permits free
+  redistribution of the unmodified shareware WAD.
 
-  Laeuft komplett offline von file:// - kein Server, kein CDN, kein fetch,
-  kein SharedArrayBuffer, keine COOP/COEP-Header noetig.
+  Runs fully offline from file:// - no server, no CDN, no fetch,
+  no SharedArrayBuffer, no COOP/COEP headers required.
 
-  VOLLVERSION: Wer die Vollversion (DOOM.WAD / Ultimate Doom) besitzt,
-  klickt unten auf "Eigene DOOM.WAD laden" und waehlt seine Datei aus.
-  Sie wird nur lokal im Browser (IndexedDB) gespeichert und verlaesst den
-  Rechner nicht. Alternativ kann weiterhin der Base64-Inhalt des
-  <script id="wad-data">-Blocks ersetzt werden
-  (Windows: certutil -encode DOOM.WAD wad.b64, Kopf-/Fusszeilen entfernen).
+  FULL VERSION: if you own the full game (DOOM.WAD / Ultimate Doom),
+  click "Load your own DOOM.WAD" below the canvas and pick your file.
+  It is stored locally in the browser (IndexedDB) and never leaves your
+  machine. Alternatively, replace the base64 content of the
+  <script id="wad-data"> block below
+  (Windows: certutil -encode DOOM.WAD wad.b64, strip header/footer lines).
 -->
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -75,20 +76,20 @@ html = r"""<!DOCTYPE html>
 <body>
 <h1>DOOM</h1>
 <canvas id="screen" width="640" height="400" tabindex="0"></canvas>
-<div id="status">WIRD GELADEN &hellip;</div>
+<div id="status">LOADING &hellip;</div>
 <div id="wadbar">
   <span id="wadlabel"></span>
-  <button id="wadpick" type="button">&#128189; Eigene DOOM.WAD laden (Vollversion)</button>
-  <button id="wadreset" type="button" hidden>&#8617; Zur&uuml;ck zur Shareware</button>
+  <button id="wadpick" type="button">&#128189; Load your own DOOM.WAD (full version)</button>
+  <button id="wadreset" type="button" hidden>&#8617; Back to shareware</button>
   <input id="wadfile" type="file" accept=".wad" hidden>
 </div>
 <div id="controls">
-  <kbd>&uarr;</kbd><kbd>&darr;</kbd> laufen &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> drehen &nbsp;
-  <kbd>Strg</kbd> schie&szlig;en &nbsp; <kbd>Leertaste</kbd> T&uuml;r/Schalter &nbsp;
-  <kbd>Alt</kbd>+<kbd>&larr;</kbd><kbd>&rarr;</kbd> Seitw&auml;rts &nbsp; <kbd>Shift</kbd> rennen<br>
-  <kbd>1</kbd>&ndash;<kbd>7</kbd> Waffe &nbsp; <kbd>Enter</kbd> ausw&auml;hlen &nbsp; <kbd>Esc</kbd> Men&uuml; &nbsp;
-  <kbd>Tab</kbd> Karte &nbsp; <kbd>F2</kbd> speichern &nbsp; <kbd>F3</kbd> laden<br>
-  <b>DOOM</b> &mdash; id Software 1993 &mdash; Engine GPLv2 (doomgeneric/WebAssembly)
+  <kbd>&uarr;</kbd><kbd>&darr;</kbd> move &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> turn &nbsp;
+  <kbd>Ctrl</kbd> fire &nbsp; <kbd>Space</kbd> open/use &nbsp;
+  <kbd>Alt</kbd>+<kbd>&larr;</kbd><kbd>&rarr;</kbd> strafe &nbsp; <kbd>Shift</kbd> run<br>
+  <kbd>1</kbd>&ndash;<kbd>7</kbd> weapons &nbsp; <kbd>Enter</kbd> select &nbsp; <kbd>Esc</kbd> menu &nbsp;
+  <kbd>Tab</kbd> map &nbsp; <kbd>F2</kbd> save &nbsp; <kbd>F3</kbd> load<br>
+  <b>DOOM</b> &mdash; id Software 1993 &mdash; engine GPLv2 (doomgeneric/WebAssembly)
 </div>
 
 <script id="wad-data" type="text/plain">
@@ -118,12 +119,12 @@ var ctx2d = null, frameImage = null, framePixels = null;
 
 function fatal(msg) {
   statusEl.className = "error";
-  statusEl.textContent = "FEHLER: " + msg;
+  statusEl.textContent = "ERROR: " + msg;
 }
 
-// ---- Eigene WAD (Vollversion) in IndexedDB ------------------------------
-// Die vom Benutzer gewaehlte WAD bleibt lokal im Browser-Speicher dieses
-// Rechners; es wird nichts hochgeladen.
+// ---- User-provided WAD (full version) in IndexedDB -----------------------
+// The WAD picked by the user stays in this browser's local storage on this
+// machine; nothing is ever uploaded.
 var DB_NAME = "doom-single-file", STORE = "wad";
 
 function idbOpen() {
@@ -174,9 +175,9 @@ document.getElementById("wadfile").addEventListener("change", function () {
   rd.onload = function () {
     var bytes = new Uint8Array(rd.result);
     var magic = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
-    if (magic !== "IWAD") { fatal("Das ist keine IWAD-Datei (erwartet DOOM.WAD)."); return; }
+    if (magic !== "IWAD") { fatal("Not an IWAD file (expected DOOM.WAD)."); return; }
     idbSetWad(bytes).then(function () { location.reload(); },
-      function (e) { fatal("Konnte WAD nicht lokal speichern: " + e); });
+      function (e) { fatal("Could not store the WAD locally: " + e); });
   };
   rd.readAsArrayBuffer(f);
 });
@@ -184,7 +185,7 @@ document.getElementById("wadreset").addEventListener("click", function () {
   idbClearWad().then(function () { location.reload(); });
 });
 
-// ---- DOOM-Tastencodes (doomkeys.h) --------------------------------------
+// ---- DOOM key codes (doomkeys.h) -----------------------------------------
 var KEY_RIGHT = 0xae, KEY_LEFT = 0xac, KEY_UP = 0xad, KEY_DOWN = 0xaf;
 var KEY_FIRE = 0xa3, KEY_USE = 0xa2, KEY_RALT = 0x80 + 0x38, KEY_RSHIFT = 0x80 + 0x36;
 var CODE_MAP = {
@@ -203,7 +204,7 @@ var CODE_MAP = {
 function doomKeyFor(e) {
   var k = CODE_MAP[e.code];
   if (k !== undefined) return k;
-  // Buchstaben/Ziffern als ASCII (Waffenwahl, y/n, Cheat-Codes wie IDDQD)
+  // Letters/digits as ASCII (weapon select, y/n prompts, cheats like IDDQD)
   if (e.key && e.key.length === 1) {
     var c = e.key.charCodeAt(0);
     if (c >= 32 && c < 127) return String.fromCharCode(c).toLowerCase().charCodeAt(0);
@@ -222,22 +223,22 @@ function onKey(pressed, e) {
 window.addEventListener("keydown", function (e) { onKey(1, e); });
 window.addEventListener("keyup", function (e) { onKey(0, e); });
 window.addEventListener("blur", function () {
-  // Alle Tasten "loslassen", sonst laeuft der Marine nach Alt+Tab weiter.
+  // Release all keys, or the marine keeps running after Alt+Tab.
   if (!engineReady) return;
   [KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN, KEY_FIRE, KEY_USE, KEY_RALT, KEY_RSHIFT].forEach(
     function (k) { Module._DG_PushKeyEvent(0, k); });
 });
 
-// ---- Emscripten-Modul ----------------------------------------------------
+// ---- Emscripten module ----------------------------------------------------
 var Module = {
   print: function (t) { console.log(t); },
   printErr: function (t) { console.warn(t); },
-  wasmBinary: null,          // wird in boot() gesetzt
-  preRun: [],                // wird in boot() gesetzt
+  wasmBinary: null,          // set in boot()
+  preRun: [],                // set in boot()
   onRuntimeInitialized: function () { engineReady = true; },
-  onAbort: function (what) { fatal("Engine abgebrochen: " + what); },
+  onAbort: function (what) { fatal("Engine aborted: " + what); },
 
-  // Von doomgeneric_emscripten.c aufgerufen:
+  // Called from doomgeneric_emscripten.c:
   dg_init: function (w, h) {
     canvas.width = w; canvas.height = h;
     ctx2d = canvas.getContext("2d");
@@ -247,8 +248,8 @@ var Module = {
     canvas.focus();
   },
   dg_drawFrame: function (ptr, w, h) {
-    // Engine-Puffer: BGRA-Bytes => als LE-uint32 0xAARRGGBB.
-    // Canvas-Puffer: RGBA-Bytes => als LE-uint32 0xAABBGGRR.
+    // Engine buffer: BGRA bytes => LE uint32 0xAARRGGBB.
+    // Canvas buffer: RGBA bytes => LE uint32 0xAABBGGRR.
     var heap = Module.HEAPU32, off = ptr >> 2, n = w * h, out = framePixels;
     for (var i = 0; i < n; i++) {
       var px = heap[off + i];
@@ -261,24 +262,24 @@ var Module = {
 
 window.onerror = function (msg) { if (!engineReady) fatal(String(msg)); };
 
-// ---- Start: erst WAD-Quelle klaeren, dann Engine-Skript einspielen -------
+// ---- Boot: resolve the WAD source first, then inject the engine ----------
 function boot(customWad) {
   var wadBytes, label;
   if (customWad) {
     wadBytes = customWad;
-    label = "VOLLVERSION: eigene WAD aktiv (" + (wadBytes.length / 1048576).toFixed(1) + " MB)";
+    label = "FULL VERSION: custom WAD active (" + (wadBytes.length / 1048576).toFixed(1) + " MB)";
     document.getElementById("wadreset").hidden = false;
     document.getElementById("wadpick").hidden = true;
   } else {
     wadBytes = b64ToBytes("wad-data");
-    label = "Shareware-Episode 1: Knee-Deep in the Dead";
+    label = "Shareware Episode 1: Knee-Deep in the Dead";
   }
   document.getElementById("wadlabel").textContent = label;
 
   try {
     Module.wasmBinary = b64ToBytes("wasm-data");
   } catch (e) {
-    fatal("WASM-Daten konnten nicht dekodiert werden: " + e);
+    fatal("Could not decode the WASM payload: " + e);
     return;
   }
   Module.preRun = [function () {
@@ -286,7 +287,7 @@ function boot(customWad) {
     FS.createDataFile("/", "doom1.wad", wadBytes, true, false);
   }];
 
-  // Engine-Skript (Emscripten-Glue) jetzt synchron ausfuehren.
+  // Execute the engine script (Emscripten glue) synchronously.
   var s = document.createElement("script");
   s.textContent = document.getElementById("engine-code").textContent;
   document.body.appendChild(s);
