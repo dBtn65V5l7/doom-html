@@ -91,7 +91,21 @@ Cheat-Codes einfach eintippen — `iddqd`, `idkfa` &amp; Co. funktionieren. 😈
 
 ## 💿 Vollversion einbauen
 
-Du besitzt die Vollversion (`DOOM.WAD` mit allen 3 Episoden)? Dann:
+Die Vollversion (`DOOM.WAD`) ist **nicht** enthalten — sie ist kommerzielle
+Ware und darf nicht frei verteilt werden. Wer sie besitzt (z.&nbsp;B. aus der
+Steam-/GOG-Version), lädt sie so:
+
+**Einfachster Weg — der Knopf unter dem Spielfeld:**
+
+1. `index.html` öffnen
+2. **„💽 Eigene DOOM.WAD laden (Vollversion)"** klicken und die eigene
+   `DOOM.WAD` auswählen
+3. Das Spiel startet neu als Vollversion (auch *Ultimate Doom* mit
+   Episode 4 funktioniert). Die WAD wird nur lokal im Browser
+   (IndexedDB) gespeichert und verlässt den Rechner nicht.
+   „↩ Zurück zur Shareware" macht es rückgängig.
+
+**Alternativ fest einbacken** (überlebt auch Browser-Datenlöschung):
 
 1. WAD zu Base64 kodieren — unter Windows:
    ```bat
@@ -100,7 +114,10 @@ Du besitzt die Vollversion (`DOOM.WAD` mit allen 3 Episoden)? Dann:
    (erste und letzte Zeile `-----BEGIN/END CERTIFICATE-----` entfernen)
 2. In `index.html` den Inhalt des Blocks `<script id="wad-data">` durch den
    Base64-Text ersetzen.
-3. Fertig — die Engine erkennt die Vollversion automatisch am WAD-Inhalt.
+
+Die Engine erkennt die Version automatisch am WAD-Inhalt.
+*Hinweis: DOOM II (`DOOM2.WAD`) wird von diesem Build nicht unterstützt —
+nur DOOM 1 / Ultimate Doom.*
 
 ## 🔨 Selbst bauen
 

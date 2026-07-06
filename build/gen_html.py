@@ -31,11 +31,12 @@ html = r"""<!DOCTYPE html>
   Laeuft komplett offline von file:// - kein Server, kein CDN, kein fetch,
   kein SharedArrayBuffer, keine COOP/COEP-Header noetig.
 
-  VOLLVERSION: Wer die Vollversion (DOOM.WAD) besitzt, ersetzt einfach den
-  Base64-Inhalt des <script id="wad-data">-Blocks unten durch
-  base64(DOOM.WAD). Unter Windows z.B.:  certutil -encode DOOM.WAD wad.b64
-  (dann Kopf-/Fusszeilen entfernen und einfuegen). Die Engine erkennt die
-  Vollversion automatisch an den WAD-Inhalten.
+  VOLLVERSION: Wer die Vollversion (DOOM.WAD / Ultimate Doom) besitzt,
+  klickt unten auf "Eigene DOOM.WAD laden" und waehlt seine Datei aus.
+  Sie wird nur lokal im Browser (IndexedDB) gespeichert und verlaesst den
+  Rechner nicht. Alternativ kann weiterhin der Base64-Inhalt des
+  <script id="wad-data">-Blocks ersetzt werden
+  (Windows: certutil -encode DOOM.WAD wad.b64, Kopf-/Fusszeilen entfernen).
 -->
 <html lang="de">
 <head>
@@ -57,8 +58,15 @@ html = r"""<!DOCTYPE html>
     box-shadow: 0 0 30px rgba(0,0,0,.8);
     outline: none;
   }
-  #status { margin: 12px; font-size: 14px; color: #888; min-height: 1.2em; }
+  #status { margin: 10px; font-size: 14px; color: #888; min-height: 1.2em; }
   #status.error { color: #f55; white-space: pre-wrap; }
+  #wadbar { margin: 2px 0 8px; font-size: 12px; color: #777; display: flex; gap: 10px; align-items: center; }
+  #wadbar button {
+    background: #2a2a2a; color: #ccc; border: 1px solid #555; border-radius: 3px;
+    font-family: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer;
+  }
+  #wadbar button:hover { background: #3a3a3a; border-color: #777; }
+  #wadlabel { color: #9a9; }
   #controls { font-size: 12px; color: #777; margin-bottom: 18px; text-align: center; line-height: 1.7; }
   #controls b { color: #aaa; }
   kbd { background: #2a2a2a; border: 1px solid #444; border-radius: 3px; padding: 0 5px; color: #ccc; font-family: inherit; }
@@ -68,13 +76,19 @@ html = r"""<!DOCTYPE html>
 <h1>DOOM</h1>
 <canvas id="screen" width="640" height="400" tabindex="0"></canvas>
 <div id="status">WIRD GELADEN &hellip;</div>
+<div id="wadbar">
+  <span id="wadlabel"></span>
+  <button id="wadpick" type="button">&#128189; Eigene DOOM.WAD laden (Vollversion)</button>
+  <button id="wadreset" type="button" hidden>&#8617; Zur&uuml;ck zur Shareware</button>
+  <input id="wadfile" type="file" accept=".wad" hidden>
+</div>
 <div id="controls">
   <kbd>&uarr;</kbd><kbd>&darr;</kbd> laufen &nbsp; <kbd>&larr;</kbd><kbd>&rarr;</kbd> drehen &nbsp;
   <kbd>Strg</kbd> schie&szlig;en &nbsp; <kbd>Leertaste</kbd> T&uuml;r/Schalter &nbsp;
   <kbd>Alt</kbd>+<kbd>&larr;</kbd><kbd>&rarr;</kbd> Seitw&auml;rts &nbsp; <kbd>Shift</kbd> rennen<br>
   <kbd>1</kbd>&ndash;<kbd>7</kbd> Waffe &nbsp; <kbd>Enter</kbd> ausw&auml;hlen &nbsp; <kbd>Esc</kbd> Men&uuml; &nbsp;
   <kbd>Tab</kbd> Karte &nbsp; <kbd>F2</kbd> speichern &nbsp; <kbd>F3</kbd> laden<br>
-  <b>Shareware-Episode 1: Knee-Deep in the Dead</b> &mdash; id Software 1993 &mdash; Engine GPLv2 (doomgeneric/WebAssembly)
+  <b>DOOM</b> &mdash; id Software 1993 &mdash; Engine GPLv2 (doomgeneric/WebAssembly)
 </div>
 
 <script id="wad-data" type="text/plain">
@@ -82,6 +96,9 @@ html = r"""<!DOCTYPE html>
 </script>
 <script id="wasm-data" type="text/plain">
 @WASM_B64@
+</script>
+<script id="engine-code" type="text/plain">
+@DOOM_JS@
 </script>
 
 <script>
@@ -103,6 +120,69 @@ function fatal(msg) {
   statusEl.className = "error";
   statusEl.textContent = "FEHLER: " + msg;
 }
+
+// ---- Eigene WAD (Vollversion) in IndexedDB ------------------------------
+// Die vom Benutzer gewaehlte WAD bleibt lokal im Browser-Speicher dieses
+// Rechners; es wird nichts hochgeladen.
+var DB_NAME = "doom-single-file", STORE = "wad";
+
+function idbOpen() {
+  return new Promise(function (res, rej) {
+    var rq = indexedDB.open(DB_NAME, 1);
+    rq.onupgradeneeded = function () { rq.result.createObjectStore(STORE); };
+    rq.onsuccess = function () { res(rq.result); };
+    rq.onerror = function () { rej(rq.error); };
+  });
+}
+function idbGetWad() {
+  return idbOpen().then(function (db) {
+    return new Promise(function (res, rej) {
+      var rq = db.transaction(STORE).objectStore(STORE).get("custom");
+      rq.onsuccess = function () { res(rq.result || null); };
+      rq.onerror = function () { rej(rq.error); };
+    });
+  });
+}
+function idbSetWad(bytes) {
+  return idbOpen().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(bytes, "custom");
+      tx.oncomplete = function () { res(); };
+      tx.onerror = function () { rej(tx.error); };
+    });
+  });
+}
+function idbClearWad() {
+  return idbOpen().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).delete("custom");
+      tx.oncomplete = function () { res(); };
+      tx.onerror = function () { rej(tx.error); };
+    });
+  });
+}
+
+document.getElementById("wadpick").addEventListener("click", function () {
+  document.getElementById("wadfile").click();
+});
+document.getElementById("wadfile").addEventListener("change", function () {
+  var f = this.files[0];
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    var bytes = new Uint8Array(rd.result);
+    var magic = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
+    if (magic !== "IWAD") { fatal("Das ist keine IWAD-Datei (erwartet DOOM.WAD)."); return; }
+    idbSetWad(bytes).then(function () { location.reload(); },
+      function (e) { fatal("Konnte WAD nicht lokal speichern: " + e); });
+  };
+  rd.readAsArrayBuffer(f);
+});
+document.getElementById("wadreset").addEventListener("click", function () {
+  idbClearWad().then(function () { location.reload(); });
+});
 
 // ---- DOOM-Tastencodes (doomkeys.h) --------------------------------------
 var KEY_RIGHT = 0xae, KEY_LEFT = 0xac, KEY_UP = 0xad, KEY_DOWN = 0xaf;
@@ -152,11 +232,8 @@ window.addEventListener("blur", function () {
 var Module = {
   print: function (t) { console.log(t); },
   printErr: function (t) { console.warn(t); },
-  wasmBinary: null,          // wird unten vor dem Engine-Skript gesetzt
-  preRun: [function () {
-    var FS = Module.FS || window.FS;
-    FS.createDataFile("/", "doom1.wad", b64ToBytes("wad-data"), true, false);
-  }],
+  wasmBinary: null,          // wird in boot() gesetzt
+  preRun: [],                // wird in boot() gesetzt
   onRuntimeInitialized: function () { engineReady = true; },
   onAbort: function (what) { fatal("Engine abgebrochen: " + what); },
 
@@ -182,16 +259,40 @@ var Module = {
   dg_setTitle: function (t) { document.title = t; }
 };
 
-try {
-  Module.wasmBinary = b64ToBytes("wasm-data");
-} catch (e) {
-  fatal("WASM-Daten konnten nicht dekodiert werden: " + e);
-}
 window.onerror = function (msg) { if (!engineReady) fatal(String(msg)); };
-</script>
 
-<script>
-@DOOM_JS@
+// ---- Start: erst WAD-Quelle klaeren, dann Engine-Skript einspielen -------
+function boot(customWad) {
+  var wadBytes, label;
+  if (customWad) {
+    wadBytes = customWad;
+    label = "VOLLVERSION: eigene WAD aktiv (" + (wadBytes.length / 1048576).toFixed(1) + " MB)";
+    document.getElementById("wadreset").hidden = false;
+    document.getElementById("wadpick").hidden = true;
+  } else {
+    wadBytes = b64ToBytes("wad-data");
+    label = "Shareware-Episode 1: Knee-Deep in the Dead";
+  }
+  document.getElementById("wadlabel").textContent = label;
+
+  try {
+    Module.wasmBinary = b64ToBytes("wasm-data");
+  } catch (e) {
+    fatal("WASM-Daten konnten nicht dekodiert werden: " + e);
+    return;
+  }
+  Module.preRun = [function () {
+    var FS = Module.FS || window.FS;
+    FS.createDataFile("/", "doom1.wad", wadBytes, true, false);
+  }];
+
+  // Engine-Skript (Emscripten-Glue) jetzt synchron ausfuehren.
+  var s = document.createElement("script");
+  s.textContent = document.getElementById("engine-code").textContent;
+  document.body.appendChild(s);
+}
+
+idbGetWad().then(boot, function () { boot(null); });
 </script>
 </body>
 </html>
